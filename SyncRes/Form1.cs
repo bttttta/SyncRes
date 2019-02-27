@@ -6,6 +6,7 @@ using System.Data;
 using System.Drawing;
 using System.Linq;
 using System.Text;
+using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using System.Windows.Forms;
 using CefSharp;
@@ -93,9 +94,33 @@ namespace SyncRes {
 			await Task.Delay(100);
 		}
 
+		private string[] GetUserIDs() {
+			const string idPattern = @"^[\dabcdef]{40}$";
+			List<string> idLists = new List<string>();
+
+			foreach(var line in userIDBox.Lines) {
+				Match match = Regex.Match(line, idPattern);
+				if(match.Success) {
+					idLists.Add(line);
+				} else {
+					if(File.Exists(line)) {
+						StreamReader reader = new StreamReader(line);
+						string user;
+						while((user = reader.ReadLine()) != null) {
+							idLists.Add(user);
+						}
+						reader.Close();
+					}
+				}
+			}
+
+			return idLists.ToArray();
+		}
+
 		private async void RKDLButton_Click(object sender, EventArgs e) {
 			int musicIDmax = (int)MusicIDBox.Value;
 			bool[] checkStates = { cbNormal.Checked, cbAdvanced.Checked, cbTechnical.Checked, cbPandora.Checked, cbMulti.Checked };
+			string[] userIDs = GetUserIDs();
 
 			string doc;
 			string tb = "";
@@ -113,7 +138,7 @@ namespace SyncRes {
 			for(int dif = 0; dif < checkStates.Length; dif++) {
 				if(checkStates[dif]) {
 					for(int id = 1; id <= musicIDmax; id++) {
-						foreach(string user in userIDBox.Lines) {
+						foreach(string user in userIDs) {
 							try {
 								string url;
 								if(dif != 4) {
@@ -162,7 +187,7 @@ namespace SyncRes {
 		}
 
 		private async void DLButton_Click(object sender, EventArgs e) {
-			string[] userIDs = userIDBox.Lines;
+			string[] userIDs = GetUserIDs();
 			int musicIDmax = (int)MusicIDBox.Value;
 			bool[] checkStates = { cbNormal.Checked, cbAdvanced.Checked, cbTechnical.Checked, cbPandora.Checked };
 			bool ignoreDeleted = cbDeleted.Checked;
