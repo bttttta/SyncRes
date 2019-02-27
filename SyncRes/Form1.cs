@@ -156,13 +156,12 @@ namespace SyncRes {
 							try {
 								ranking = new Ranking(doc);
 							} catch(FileNotFoundException) { }
-							if(ranking != null && ranking.Page == 1) break;
-						}
 
-						if(ranking != null && (!cbDeleted.Checked || !ranking.IsDeleted)) {
-							foreach(string s in ranking.IDs) {
-								if(s == "") break;
-								tb += s + "\r\n";
+							if(ranking != null && (!cbDeleted.Checked || !ranking.IsDeleted)) {
+								foreach(string s in ranking.IDs) {
+									if(s == "") break;
+									tb += s + "\r\n";
+								}
 							}
 						}
 
