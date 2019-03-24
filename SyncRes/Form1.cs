@@ -14,84 +14,36 @@ using CefSharp.WinForms;
 
 namespace SyncRes {
 	public partial class Form1 : Form {
-		ChromiumWebBrowser browser;
+		Browser browser;
 
 		string userPID;
-
-		private bool webDocReadMode = false;
-		private string currentUrl;
-
-		bool dc = false; //dcで T/F切り替え
 
 		public Form1() {
 			InitializeComponent();
 
-			var settings = new CefSettings();
-			settings.Locale = "ja";
-			settings.AcceptLanguageList = "ja-JP";
-			Cef.Initialize(settings);
-			browser = new ChromiumWebBrowser("https://lounge.synchronica.jp/");
-			splitContainer1.Panel2.Controls.Add(browser);
-			browser.Dock = DockStyle.Fill;
-			browser.AddressChanged += Browser_AddressChanged;
-			browser.FrameLoadEnd += Browser_FrameLoadEnd;
+            browser = new Browser("https://lounge.synchronica.jp/");
+            Control browserControl = browser.GetControl();
+			splitContainer1.Panel2.Controls.Add(browserControl);
+			browserControl.Dock = DockStyle.Fill;
+			browser.OnReadEnded += Browser_AddressChanged;
 		}
 
-		private void Browser_FrameLoadEnd(object sender, FrameLoadEndEventArgs e) {
-			dc = !dc;
-		}
+		private async void Browser_AddressChanged(object sender, EventArgs e) {
+            string url = browser.GetURL();
+            urlTextBox.Text = url;
+            if(url == "https://lounge.synchronica.jp/MyPage" && statusLabel.Text == "Unlogin") {
+                statusLabel.Text = "Login";
+                statusLabel.ForeColor = Color.DarkCyan;
+                DLButton.Enabled = true;
+                RKDLButton.Enabled = true;
 
-		private void Browser_AddressChanged(object sender, AddressChangedEventArgs e) {
-			Action action = async () =>{
-				string url = browser.Address;
-				urlTextBox.Text = url;
-				if(url == "https://lounge.synchronica.jp/MyPage" && statusLabel.Text == "Unlogin") {
-					statusLabel.Text = "Login";
-					statusLabel.ForeColor = Color.DarkCyan;
-					DLButton.Enabled = true;
-					RKDLButton.Enabled = true;
+                browser.BeginDocReadMode(url);
+                string doc = await browser.ReadDocument("https://lounge.synchronica.jp/ScoreData");
+                userPID = Player.GetUserPID(doc);
+                browser.EndDocReadMode();
 
-					BeginDocReadMode();
-					var doc = await ReadDocument("https://lounge.synchronica.jp/ScoreData");
-					userPID = Player.GetUserPID(doc);
-					EndDocReadMode();
-
-					userIDBox.Lines = new[] { userPID };
-				}
-			};
-			browser.BeginInvoke(action);
-		}
-
-		public void BeginDocReadMode() {
-			if(!webDocReadMode) {
-				webDocReadMode = true;
-				currentUrl = urlTextBox.Text;
-				browser.Visible = false;
-			}
-		}
-
-		public void EndDocReadMode() {
-			if(webDocReadMode) {
-				webDocReadMode = false;
-				browser.Load(currentUrl);
-				browser.Visible = true;
-			}
-		}
-
-		public async Task<string> ReadDocument(string url) {
-			if(!webDocReadMode) BeginDocReadMode();
-
-			browser.Load(url);
-			await WaitForDocumentDownload();
-
-			return await browser.GetSourceAsync();
-		}
-
-		private async Task WaitForDocumentDownload() {
-			bool cdc = dc;
-			int timeout = 100;
-			while(cdc == dc || timeout-- <= 0) await Task.Delay(66);
-			await Task.Delay(100);
+                userIDBox.Lines = new[] { userPID };
+            }
 		}
 
 		private string[] GetUserIDs() {
@@ -134,7 +86,7 @@ namespace SyncRes {
 			statusLabel.Text = "Reading";
 			statusLabel.ForeColor = Color.Blue;
 
-			BeginDocReadMode();
+			browser.BeginDocReadMode(browser.GetURL());
 			for(int dif = 0; dif < checkStates.Length; dif++) {
 				if(checkStates[dif]) {
 					for(int id = 1; id <= musicIDmax; id++) {
@@ -147,7 +99,7 @@ namespace SyncRes {
 									url = "https://lounge.synchronica.jp/ComboRanking/detail/" + user + "/0?s_id=" + id;
 								}
 
-								doc = await ReadDocument(url);
+								doc = await browser.ReadDocument(url);
 							} catch(System.Reflection.TargetInvocationException) {
 								continue;
 							}
@@ -170,7 +122,7 @@ namespace SyncRes {
 				}
 			}
 
-			EndDocReadMode();
+			browser.EndDocReadMode();
 
 			//データの書き出し
 			UTF8Encoding encoding = new UTF8Encoding(true);
@@ -232,10 +184,10 @@ namespace SyncRes {
 			statusLabel.Text = "Reading";
 			statusLabel.ForeColor = Color.Blue;
 
-			BeginDocReadMode();
+			browser.BeginDocReadMode(browser.GetURL());
 			if(cbPerson.Checked || cbDetail.Checked) {
 				for(int user = 0; user < userIDs.Length; user++) {
-					doc = await ReadDocument("https://lounge.synchronica.jp/Friend/info/" + userIDs[user]);
+					doc = await browser.ReadDocument("https://lounge.synchronica.jp/Friend/info/" + userIDs[user]);
 					players[user] = Player.ParseFromSite(doc, userIDs[user]);
 					progressBar.Value++;
 				}
@@ -247,7 +199,7 @@ namespace SyncRes {
 						for(int music = 0; music < musicIDmax; music++) {
 							try {
 								if((!cbFast.Checked || user == 0 || results[0][dif][music] != null)) {
-									doc = await ReadDocument("https://lounge.synchronica.jp/PersonalScore/detail/" + userIDs[user] + "/" + (music + 1) + "?level=" + dif);
+									doc = await browser.ReadDocument("https://lounge.synchronica.jp/PersonalScore/detail/" + userIDs[user] + "/" + (music + 1) + "?level=" + dif);
 									Result result = Result.ParseFromSite(doc, (music + 1).ToString());
 									if((!ignoreDeleted || !result.IsDeleted)) {
 										results[user][dif][music] = result;
@@ -271,7 +223,7 @@ namespace SyncRes {
 					for(int music = 0; music < musicIDmax; music++) {
 						try {
 							if(!cbFast.Checked || user == 0 || multis[0][music] != null) {
-								doc = await ReadDocument("https://lounge.synchronica.jp/PersonalScore/combo/" + userIDs[user] + "/" + (music + 1));
+								doc = await browser.ReadDocument("https://lounge.synchronica.jp/PersonalScore/combo/" + userIDs[user] + "/" + (music + 1));
 								Multi multi = Multi.ParseFromSite(doc, (music + 1).ToString(), userIDs[user], userPID);
 								if(multi.Combo != "--" && (!ignoreDeleted || !multi.IsDeleted)) {
 									multis[user][music] = multi;
@@ -289,7 +241,7 @@ namespace SyncRes {
 				}
 			}
 
-			EndDocReadMode();
+			browser.EndDocReadMode();
 
 			//データの書き出し
 			UTF8Encoding encoding = new UTF8Encoding(true);
@@ -349,7 +301,7 @@ namespace SyncRes {
 		}
 
 		private void Form1_FormClosing(object sender, FormClosingEventArgs e) {
-			Cef.Shutdown();
+            Browser.Shutdown();
 		}
 	}
 }
