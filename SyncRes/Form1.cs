@@ -9,8 +9,6 @@ using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using System.Windows.Forms;
-using CefSharp;
-using CefSharp.WinForms;
 
 namespace SyncRes {
 	public partial class Form1 : Form {
@@ -21,7 +19,7 @@ namespace SyncRes {
 		public Form1() {
 			InitializeComponent();
 
-            browser = new Browser("https://lounge.synchronica.jp/");
+            browser = new Browser(LoungeURL.Login);
             Control browserControl = browser.GetControl();
 			splitContainer1.Panel2.Controls.Add(browserControl);
 			browserControl.Dock = DockStyle.Fill;
@@ -31,14 +29,14 @@ namespace SyncRes {
 		private async void Browser_AddressChanged(object sender, EventArgs e) {
             string url = browser.GetURL();
             urlTextBox.Text = url;
-            if(url == "https://lounge.synchronica.jp/MyPage" && statusLabel.Text == "Unlogin") {
+            if(url == LoungeURL.Home && statusLabel.Text == "Unlogin") {
                 statusLabel.Text = "Login";
                 statusLabel.ForeColor = Color.DarkCyan;
                 DLButton.Enabled = true;
                 RKDLButton.Enabled = true;
 
                 browser.BeginDocReadMode(url);
-                string doc = await browser.ReadDocument("https://lounge.synchronica.jp/ScoreData");
+                string doc = await browser.ReadDocument(LoungeURL.ScoreHome);
                 userPID = Player.GetUserPID(doc);
                 browser.EndDocReadMode();
 
@@ -87,17 +85,12 @@ namespace SyncRes {
 			statusLabel.ForeColor = Color.Blue;
 
 			browser.BeginDocReadMode(browser.GetURL());
-			for(int dif = 0; dif < checkStates.Length; dif++) {
-				if(checkStates[dif]) {
+			foreach(Difficulty dif in Enum.GetValues(typeof(Difficulty))) {
+				if(checkStates[(int)dif]) {
 					for(int id = 1; id <= musicIDmax; id++) {
 						foreach(string user in userIDs) {
 							try {
-								string url;
-								if(dif != 4) {
-									url = "https://lounge.synchronica.jp/ScoreRanking/detail/" + user + "/0?s_id=" + id + "&level=" + dif;
-								} else {
-									url = "https://lounge.synchronica.jp/ComboRanking/detail/" + user + "/0?s_id=" + id;
-								}
+								string url = LoungeURL.ScoreRanking(user, id.ToString(), dif);
 
 								doc = await browser.ReadDocument(url);
 							} catch(System.Reflection.TargetInvocationException) {
@@ -187,7 +180,7 @@ namespace SyncRes {
 			browser.BeginDocReadMode(browser.GetURL());
 			if(cbPerson.Checked || cbDetail.Checked) {
 				for(int user = 0; user < userIDs.Length; user++) {
-					doc = await browser.ReadDocument("https://lounge.synchronica.jp/Friend/info/" + userIDs[user]);
+					doc = await browser.ReadDocument(LoungeURL.Player(userIDs[user]));
 					players[user] = Player.ParseFromSite(doc, userIDs[user]);
 					progressBar.Value++;
 				}
@@ -198,8 +191,8 @@ namespace SyncRes {
 					for(int user = 0; user < userIDs.Length; user++) {
 						for(int music = 0; music < musicIDmax; music++) {
 							try {
-								if((!cbFast.Checked || user == 0 || results[0][dif][music] != null)) {
-									doc = await browser.ReadDocument("https://lounge.synchronica.jp/PersonalScore/detail/" + userIDs[user] + "/" + (music + 1) + "?level=" + dif);
+								if(!cbFast.Checked || user == 0 || results[0][dif][music] != null) {
+									doc = await browser.ReadDocument(LoungeURL.Score(userIDs[user], (music + 1).ToString(), (Difficulty)dif));
 									Result result = Result.ParseFromSite(doc, (music + 1).ToString());
 									if((!ignoreDeleted || !result.IsDeleted)) {
 										results[user][dif][music] = result;
@@ -223,7 +216,7 @@ namespace SyncRes {
 					for(int music = 0; music < musicIDmax; music++) {
 						try {
 							if(!cbFast.Checked || user == 0 || multis[0][music] != null) {
-								doc = await browser.ReadDocument("https://lounge.synchronica.jp/PersonalScore/combo/" + userIDs[user] + "/" + (music + 1));
+								doc = await browser.ReadDocument(LoungeURL.Multi(userIDs[user], (music + 1).ToString()));
 								Multi multi = Multi.ParseFromSite(doc, (music + 1).ToString(), userIDs[user], userPID);
 								if(multi.Combo != "--" && (!ignoreDeleted || !multi.IsDeleted)) {
 									multis[user][music] = multi;
