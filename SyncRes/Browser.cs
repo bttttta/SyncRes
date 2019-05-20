@@ -48,15 +48,27 @@ namespace SyncRes {
         /// </summary>
         public async Task<string> ReadDocument(string url) {
             browser.Load(url);
-            await WaitForDocumentDownload();
+            await WaitForDocumentDownload(500);
+            if(isReading) {
+                browser.Load(url);
+                await WaitForDocumentDownload(5000);
+                if(isReading) {
+                    throw new TimeoutException("タイムアウトしました");
+                }
+            }
             return await browser.GetSourceAsync();
         }
 
-        private async Task WaitForDocumentDownload() {
+        private async Task WaitForDocumentDownload(int timeout) {
             isReading = true;
-            int timeout = 100;
-            while(isReading || timeout-- <= 0) await Task.Delay(66);
-            await Task.Delay(100);
+            while(isReading) {
+                await Task.Delay(33);
+                if(timeout-- <= 0) {
+                    break;
+                }
+            }
+            await Task.Delay(33);
+            return;
         }
 
         /// <summary>
