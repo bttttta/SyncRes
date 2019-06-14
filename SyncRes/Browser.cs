@@ -20,7 +20,7 @@ namespace SyncRes {
                 Cef.Initialize(settings);
                 isInitialized = true;
             }
-            browser = new ChromiumWebBrowser("https://lounge.synchronica.jp/");
+            browser = new ChromiumWebBrowser(url);
             browser.FrameLoadEnd += (sender, e) => isReading = false;
         }
         
@@ -48,10 +48,11 @@ namespace SyncRes {
         /// </summary>
         public async Task<string> ReadDocument(string url) {
             browser.Load(url);
-            await WaitForDocumentDownload(500);
-            if(isReading) {
+            string ret = await browser.GetSourceAsync();
+            await WaitForDocumentDownload(500, ret);
+            if (isReading) {
                 browser.Load(url);
-                await WaitForDocumentDownload(5000);
+                await WaitForDocumentDownload(5000, ret);
                 if(isReading) {
                     throw new TimeoutException("タイムアウトしました");
                 }
@@ -59,9 +60,9 @@ namespace SyncRes {
             return await browser.GetSourceAsync();
         }
 
-        private async Task WaitForDocumentDownload(int timeout) {
+        private async Task WaitForDocumentDownload(int timeout, string html) {
             isReading = true;
-            while(isReading) {
+            while(isReading && html != "") {
                 await Task.Delay(33);
                 if(timeout-- <= 0) {
                     break;
