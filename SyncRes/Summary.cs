@@ -11,12 +11,7 @@ namespace SyncRes {
 
 		public Summary(Player player, Result[][] results) {
 			this.player = player;
-			this.results = new Result[4][];
-			for(int i = 0; i < this.results.Length; i++) {
-				var l = results[i].ToList();
-				l.RemoveAll(r => r == null);
-				this.results[i] = l.ToArray();
-			}
+            this.results = results;
 		}
 
 		public string MakeCSV() {
@@ -24,23 +19,24 @@ namespace SyncRes {
 
 			int[] songNum = new int[5];
 			for(int i = 0; i < 4; i++) {
-				songNum[4] += songNum[i] = results[i].Count(r => r.Score != "--");
+				songNum[4] += songNum[i] = results[i].Count();
 			}
 
 			int[] playNum = new int[5];
 			for(int i = 0; i < 4; i++) {
-				playNum[4] += playNum[i] = results[i].Sum(r => int.Parse(r.PlayNum));
+				playNum[4] += playNum[i] = results[i].Sum(r => r != null ? int.Parse(r.PlayNum) : 0);
 			}
 			int money = playNum[4] * 100 / 3;
 
 			decimal[] averageCR = new decimal[5];
+            decimal[] sumCR = new decimal[5];
 			for(int i = 0; i < 4; i++) {
-				decimal crsum = results[i].Sum(r => decimal.Parse(r.CR));
-				averageCR[i] = crsum / songNum[i];
-				averageCR[4] += crsum / songNum[4];
+				sumCR[4] += sumCR[i] = results[i].Sum(r => r != null ? decimal.Parse(r.CR) : 0);
+				averageCR[i] = sumCR[i] / songNum[i];
 			}
+            averageCR[4] = sumCR[4] / songNum[4];
 
-			int[] getCounts(Func<Result, bool> predicate) {
+            int[] getCounts(Func<Result, bool> predicate) {
 				int[] ret = new int[5];
 				for(int i = 0; i < 4; i++) {
 					ret[4] += ret[i] = results[i].Count(predicate);
@@ -48,11 +44,11 @@ namespace SyncRes {
 				return ret;
 			}
 
-			int[] playStage = getCounts(r => r.PlayNum != "0");
-			int[] clearStage = getCounts(r => r.ClearNum != "0");
-			int[] fcStage = getCounts(r => r.FCNum != "0");
-			int[] aaafcStage = getCounts(r => (r.Rank == "AAA" || r.Rank == "Rz") && r.FCNum != "0");
-			int[] rzfcStage = getCounts(r => r.Rank == "Rz" && r.FCNum != "0");
+			int[] playStage = getCounts(r => r != null && r.PlayNum != "0");
+			int[] clearStage = getCounts(r => r != null && r.ClearNum != "0");
+			int[] fcStage = getCounts(r => r != null && r.FCNum != "0");
+			int[] aaafcStage = getCounts(r => r != null && (r.Rank == "AAA" || r.Rank == "Rz") && r.FCNum != "0");
+			int[] rzfcStage = getCounts(r => r != null && r.Rank == "Rz" && r.FCNum != "0");
 			
 			// write
 			string res = "";

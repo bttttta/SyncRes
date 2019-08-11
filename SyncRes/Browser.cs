@@ -62,7 +62,7 @@ namespace SyncRes {
 
         private async Task WaitForDocumentDownload(int timeout, string html) {
             isReading = true;
-            while(isReading && html != "") {
+            while(browser.IsLoading || html == "") {
                 await Task.Delay(33);
                 if(timeout-- <= 0) {
                     break;

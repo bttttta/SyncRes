@@ -136,8 +136,9 @@ namespace SyncRes {
 	}
 
 	class Result {
-		public string ID { get; private set; }
-		public string SongName { get; private set; }
+        public string PlayerID { get; private set; }
+        public string ID { get; private set; }
+        public string SongName { get; private set; }
 		public string Rank { get; private set; }
 		public string Ranking { get; private set; }
 		public string PlayNum { get; private set; }
@@ -156,11 +157,12 @@ namespace SyncRes {
 
 		internal Result() { }
 
-		public static Result ParseFromSite(string site, string id) {
+		public static Result ParseFromSite(string site, string id, string pid) {
 			Result ret = new Result();
 			string reg;
 			string match;
 
+            ret.PlayerID = pid;
 			ret.ID = id;
 
 			reg = "<div id = \"song_name\"> <p> 指定されたスコアは表示できません </p> </div>";
@@ -258,18 +260,48 @@ namespace SyncRes {
 			get { return Regex.Match(SongName, "^（.*）$").Success; }
 		}
 
-		static public string MakeResultCSV(Result[] results, bool ignoreDeleted) {
+		static public string MakeResultCSV(Result[] results) {
 			string res = "\"ID\",\"曲名\",\"ランク\",\"順位\",\"P回\",\"C回\",\"F回\",\"スコア\",\"CR\",\"コンボ\",\"CB\",\"RB\",\"Pf\",\"Gr\",\"Gd\",\"F\",\"S\"\r\n";
 
 			foreach(var item in results) {
-				if(item != null && (!ignoreDeleted ||!item.IsDeleted)) {
+				if(item != null) {
 					res += item.ToString() + "\r\n";
 				}
 			}
 
 			return res;
 		}
-	}
+
+        static public string MakeResultCSV(Result[][] results, List<int> MusicList) {
+            // 先頭行
+            string res = "\"ID\"";
+            foreach(int musicID in MusicList) {
+                res += ",\"" + musicID + "\"";
+            }
+            res += "\r\n";
+
+            foreach(Result[] result in results) {
+                // プレイヤーID
+                foreach(Result r in result) {
+                    if(r != null) {
+                        res += "\"" + r.PlayerID + "\"";
+                        break;
+                    }
+                }
+                // コンボ数
+                foreach(Result r in result) {
+                    if(r != null) {
+                        res += ",\"" + r.Combo + "\"";
+                    } else {
+                        res += ",\"0\"";
+                    }
+                }
+                res += "\r\n";
+            }
+
+            return res;
+        }
+    }
 
 	class Multi {
 		public string PlayerID { get; private set; }
@@ -343,11 +375,11 @@ namespace SyncRes {
 			get { return Regex.Match(SongName, "^（.*）$").Success; }
 		}
 
-		static public string MakeResultCSV(Multi[] multis, bool ignoreDeleted) {
+		static public string MakeResultCSV(Multi[] multis) {
 			string res = "\"ID\",\"曲名\",\"順位\",\"コンボ\",\"相方\",\"ID\"\r\n";
 
 			foreach(var item in multis) {
-				if(item != null && (!ignoreDeleted || !Regex.Match(item.SongName, "（.*）").Success)) {
+				if(item != null) {
 					res += item.ToString() + "\r\n";
 				}
 			}
@@ -355,33 +387,29 @@ namespace SyncRes {
 			return res;
 		}
 
-		static public string MakeResultCSV(Multi[][] multis, bool ignoreDeleted, int musicIDMax) {
+		static public string MakeResultCSV(Multi[][] multis, List<int> MusicList) {
+            // 先頭行
 			string res = "\"ID\"";
-			foreach(int musicID in Enumerable.Range(1,musicIDMax).ToArray()) {
+			foreach(int musicID in MusicList) {
 				res += ",\"" + musicID + "\"";
 			}
 			res += "\r\n";
 
 			foreach(Multi[] multi in multis) {
+                // プレイヤーID
 				foreach(Multi m in multi) {
 					if(m != null) {
 						res += "\"" + m.PlayerID + "\"";
 						break;
 					}
 				}
-				for(int i = 1; i <= musicIDMax; i++) {
-					int index = -1;
-					for(int j = 0; j < multi.Length; j++) {
-						if(multi[j] != null && multi[j].SongID == i.ToString()) {
-							index = j;
-							break;
-						}
-					}
-					if(index >= 0 && (!ignoreDeleted || !multi[index].IsDeleted)) {
-						res += ",\"" + multi[index].Combo + "\"";
-					} else {
-						res += ",\"0\"";
-					}
+                // コンボ数
+				foreach(Multi m in multi) {
+                    if(m != null) {
+                        res += ",\"" + m.Combo + "\"";
+                    } else {
+                        res += ",\"0\"";
+                    }
 				}
 				res += "\r\n";
 			}

@@ -24,6 +24,8 @@ namespace SyncRes {
 			splitContainer1.Panel2.Controls.Add(browserControl);
 			browserControl.Dock = DockStyle.Fill;
 			browser.OnReadEnded += Browser_AddressChanged;
+
+            cmMusic.SelectedIndex = 0;
 		}
 
 		private async void Browser_AddressChanged(object sender, EventArgs e) {
@@ -67,28 +69,50 @@ namespace SyncRes {
 			return idLists.ToArray();
 		}
 
+        /// <summary>
+        /// 読み込む楽曲IDの一覧を返す
+        /// </summary>
+        private List<int> GetMusicLists(bool isPnd) {
+            switch(cmMusic.SelectedIndex) {
+                case 0: //全譜面
+                    return isPnd ? MusicData.GetPndMusicIDs().ToList() : MusicData.GetExistsMusicIDs().ToList();
+                case 1: //非サヨナラ
+                    return isPnd ? MusicData.GetNonDeletedPndIDs().ToList() : MusicData.GetNonDeletedIDs().ToList();
+                default: //レート対象
+                    return isPnd ? MusicData.GetRateTargetIDs(Difficulty.Pnd).ToList() : MusicData.GetRateTargetIDs(Difficulty.Tec).ToList();
+            }
+        }
+
 		private async void RKDLButton_Click(object sender, EventArgs e) {
-			int musicIDmax = (int)MusicIDBox.Value;
 			bool[] checkStates = { cbNormal.Checked, cbAdvanced.Checked, cbTechnical.Checked, cbPandora.Checked, cbMulti.Checked };
 			string[] userIDs = GetUserIDs();
+            List<int> musicListNATM = GetMusicLists(false), musicListPnd = GetMusicLists(true); //読み込む曲IDのリスト
 
-			string doc;
-			string tb = "";
+            string doc;
+			string tb = ""; // CSVに書き込むテキスト(表形式)
 			Ranking ranking = null;
 
 			StreamWriter writer;
 
-			progressBar.Maximum = checkStates.Count((bool b) => b) * musicIDmax;
-			progressBar.Value = 0;
+            // 左のバーの初期設定
+            progressBar.Maximum = 0;
+            if(checkStates[3]) {
+                progressBar.Maximum = (checkStates.Count((bool b) => b) - 1) * musicListNATM.Count + musicListPnd.Count;
+            } else {
+                progressBar.Maximum = checkStates.Count((bool b) => b) * musicListNATM.Count;
+            }
+            progressBar.Value = 0;
 
 			statusLabel.Text = "Reading";
 			statusLabel.ForeColor = Color.Blue;
 
+            // 読み込み
 			browser.BeginDocReadMode(browser.GetURL());
 			foreach(Difficulty dif in Enum.GetValues(typeof(Difficulty))) {
 				if(checkStates[(int)dif]) {
-					for(int id = 1; id <= musicIDmax; id++) {
+					foreach(int id in (dif == Difficulty.Pnd) ? musicListPnd : musicListNATM) {
 						foreach(string user in userIDs) {
+                            // サイトを読み込んで
 							try {
 								string url = LoungeURL.ScoreRanking(user, id.ToString(), dif);
 
@@ -97,12 +121,14 @@ namespace SyncRes {
 								continue;
 							}
 
+                            // パースして
 							ranking = null;
 							try {
 								ranking = new Ranking(doc);
 							} catch(FileNotFoundException) { }
 
-							if(ranking != null && (!cbDeleted.Checked || !ranking.IsDeleted)) {
+                            // tbに書き込む
+							if(ranking != null) {
 								foreach(string s in ranking.IDs) {
 									if(s == "") break;
 									tb += s + "\r\n";
@@ -131,44 +157,45 @@ namespace SyncRes {
 		}
 
 		private async void DLButton_Click(object sender, EventArgs e) {
-			string[] userIDs = GetUserIDs();
-			int musicIDmax = (int)MusicIDBox.Value;
+			string[] userIDs = GetUserIDs().Except(new[] { "" }).ToArray(); // 読み込み対象のプレイヤーID
 			bool[] checkStates = { cbNormal.Checked, cbAdvanced.Checked, cbTechnical.Checked, cbPandora.Checked };
-			bool ignoreDeleted = cbDeleted.Checked;
-			bool isDownload(int dif) => checkStates[dif] || cbDetail.Checked || (dif >= 2 && cbTecpnd.Checked);
+			bool isDownload(int dif) => checkStates[dif] || cbDetail.Checked || (dif >= 2 && cbTecpnd.Checked); // 各難易度を読み込むか
+            List<int> musicListNATM = GetMusicLists(false), musicListPnd = GetMusicLists(true); //読み込む曲IDのリスト
+            List<int> musicList(int dif) => dif == 3 ? musicListPnd : musicListNATM;
+            //List<int> deletedList = new List<int>(); //サヨナラ曲の一覧
 
-			Player[] players = new Player[userIDs.Length];
-			Result[][][] results = new Result[userIDs.Length][][];
+            // データ格納用の配列
+            Player[] players = new Player[userIDs.Length];
+			Result[][][] results = new Result[userIDs.Length][][]; //[プレイヤー][難易度][曲(MusicDataの配列と同じ。若い順に0123...)]
 			for(int i = 0; i < results.Length; ++i) {
 				results[i] = new Result[4][];
 				for(int j = 0; j < results[i].Length; ++j) {
-					results[i][j] = new Result[musicIDmax];
+                    results[i][j] = new Result[musicList(j).Count];
 				}
 			}
-			Multi[][] multis = new Multi[userIDs.Length][];
-			for(int i = 0; i < multis.Length; ++i) {
-				multis[i] = new Multi[musicIDmax];
+			Multi[][] multis = new Multi[userIDs.Length][]; //[プレイヤー][曲(MusicDataの配列と同じ。)]
+            for(int i = 0; i < multis.Length; ++i) {
+				multis[i] = new Multi[musicListNATM.Count];
 			}
 
 			StreamWriter writer;
 
 			string doc;
-
-			userIDs = userIDs.Except(new[] { "" }).ToArray();
-
-			//データの読み込み
-			progressBar.Value = 0;
+            
+            // 左のバーの初期設定
+            progressBar.Value = 0;
 			progressBar.Maximum = 0;
-			if(cbPerson.Checked || cbDetail.Checked) {
+
+            if(cbPerson.Checked || cbDetail.Checked) {
 				progressBar.Maximum = userIDs.Length;
 			}
 			for(int dif = 0; dif < 4; dif++) {
 				if(isDownload(dif)) {
-					progressBar.Maximum += userIDs.Length * musicIDmax;
+                    progressBar.Maximum += userIDs.Length * musicList(dif).Count;
 				}
 			}
 			if(cbMulti.Checked) {
-				progressBar.Maximum += userIDs.Length * musicIDmax;
+                progressBar.Maximum += userIDs.Length * musicListNATM.Count;
 			}
 			if(progressBar.Maximum == 0) {
 				progressBar.Maximum = 1;
@@ -177,7 +204,8 @@ namespace SyncRes {
 			statusLabel.Text = "Reading";
 			statusLabel.ForeColor = Color.Blue;
 
-			browser.BeginDocReadMode(browser.GetURL());
+            //データの読み込み
+            browser.BeginDocReadMode(browser.GetURL());
 			if(cbPerson.Checked || cbDetail.Checked) {
 				for(int user = 0; user < userIDs.Length; user++) {
 					doc = await browser.ReadDocument(LoungeURL.Player(userIDs[user]));
@@ -189,20 +217,13 @@ namespace SyncRes {
 			for(int dif = 0; dif < 4; dif++) {
 				if(isDownload(dif)) {
 					for(int user = 0; user < userIDs.Length; user++) {
-						for(int music = 0; music < musicIDmax; music++) {
+						for(int music = 0; music < musicList(dif).Count; music++) {
 							try {
-								if(!cbFast.Checked || user == 0 || results[0][dif][music] != null) {
-									doc = await browser.ReadDocument(LoungeURL.Score(userIDs[user], (music + 1).ToString(), (Difficulty)dif));
-									Result result = Result.ParseFromSite(doc, (music + 1).ToString());
-									if((!ignoreDeleted || !result.IsDeleted)) {
-										results[user][dif][music] = result;
-									} else {
-										results[user][dif][music] = null;
-									}
-								} else {
-									results[user][dif][music] = null;
-								}
-							} catch(FileNotFoundException) {
+                                int musicID = musicList(dif)[music]; //楽曲ID(musicとは違う)
+                                doc = await browser.ReadDocument(LoungeURL.Score(userIDs[user], musicID.ToString(), (Difficulty)dif));
+                                Result result = Result.ParseFromSite(doc, musicID.ToString(), userIDs[user]);
+                                results[user][dif][music] = result;
+                            } catch(FileNotFoundException) {
 								results[user][dif][music] = null;
 							}
 							progressBar.Value++;
@@ -213,20 +234,17 @@ namespace SyncRes {
 
 			if(cbMulti.Checked) {
 				for(int user = 0; user < userIDs.Length; user++) {
-					for(int music = 0; music < musicIDmax; music++) {
+					for(int music = 0; music < musicListNATM.Count; music++) {
 						try {
-							if(!cbFast.Checked || user == 0 || multis[0][music] != null) {
-								doc = await browser.ReadDocument(LoungeURL.Multi(userIDs[user], (music + 1).ToString()));
-								Multi multi = Multi.ParseFromSite(doc, (music + 1).ToString(), userIDs[user], userPID);
-								if(multi.Combo != "--" && (!ignoreDeleted || !multi.IsDeleted)) {
-									multis[user][music] = multi;
-								} else {
-									multis[user][music] = null;
-								}
-							} else {
-								multis[user][music] = null;
-							}
-						} catch(FileNotFoundException) {
+                            int musicID = musicListNATM[music];
+                            doc = await browser.ReadDocument(LoungeURL.Multi(userIDs[user], musicID.ToString()));
+                            Multi multi = Multi.ParseFromSite(doc, musicID.ToString(), userIDs[user], userPID);
+                            if(multi.Combo != "--") {
+                                multis[user][music] = multi;
+                            } else {
+                                multis[user][music] = null;
+                            }
+                        } catch(FileNotFoundException) {
 							multis[user][music] = null;
 						}
 						progressBar.Value++;
@@ -257,27 +275,50 @@ namespace SyncRes {
 			for(int dif = 0; dif < 4; dif++) {
 				if(checkStates[dif]) {
 					writer = new StreamWriter(fname[dif], false, encoding);
-					writer.Write(Result.MakeResultCSV(results[0][dif], ignoreDeleted));
-					writer.Close();
+                    if(userIDs.Length == 1) {
+                        writer.Write(Result.MakeResultCSV(results[0][dif]));
+                    } else {
+                        Result[][] r = new Result[players.Length][];
+                        for(int i = 0; i < players.Length; i++) {
+                            r[i] = results[i][dif];
+                        }
+                        writer.Write(Result.MakeResultCSV(r, musicList(dif)));
+                    }
+                    writer.Close();
 				}
 			}
 
 			if(cbTecpnd.Checked) {
-				Result[] tpRes = new Result[musicIDmax];
-				for(int i = 0; i < musicIDmax; i++) {
-					tpRes[i] = results[0][3][i] ?? results[0][2][i];
+				Result[] tpRes = new Result[musicListNATM.Count];
+                int pndIndex;
+				for(int i = 0; i < tpRes.Length; i++) {
+                    //まず箱があるか探す
+                    pndIndex = -1;
+                    string musicID = results[0][2][i].ID;
+                    for(int j = 0; j < results[0][3].Length; j++) {
+                        if(results[0][3][j] != null && results[0][3][j].ID == musicID) {
+                            pndIndex = j;
+                            break;
+                        }
+                    }
+
+                    if(pndIndex != -1) {
+                        tpRes[i] = results[0][3][pndIndex];
+                    } else {
+                        tpRes[i] = results[0][2][i];
+                    }
 				}
 				writer = new StreamWriter("TP.csv", false, encoding);
-				writer.Write(Result.MakeResultCSV(tpRes, ignoreDeleted));
+				writer.Write(Result.MakeResultCSV(tpRes));
 				writer.Close();
 			}
 
 			if(cbMulti.Checked) {
 				writer = new StreamWriter("Multi.csv", false, encoding);
 				if(userIDs.Length == 1) {
-					writer.Write(Multi.MakeResultCSV(multis[0], ignoreDeleted));
+					writer.Write(Multi.MakeResultCSV(multis[0]));
 				} else {
-					writer.Write(Multi.MakeResultCSV(multis, ignoreDeleted, musicIDmax));
+					writer.Write(Multi.MakeResultCSV(multis, musicListNATM));
 				}
 				writer.Close();
 			}
