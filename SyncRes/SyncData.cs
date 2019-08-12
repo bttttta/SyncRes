@@ -256,10 +256,6 @@ namespace SyncRes {
 				+ '\"' + Slow + "\"";
 		}
 
-		public bool IsDeleted {
-			get { return Regex.Match(SongName, "^（.*）$").Success; }
-		}
-
 		static public string MakeResultCSV(Result[] results) {
 			string res = "\"ID\",\"曲名\",\"ランク\",\"順位\",\"P回\",\"C回\",\"F回\",\"スコア\",\"CR\",\"コンボ\",\"CB\",\"RB\",\"Pf\",\"Gr\",\"Gd\",\"F\",\"S\"\r\n";
 
@@ -371,10 +367,6 @@ namespace SyncRes {
 				+ '\"' + PartnerID + "\"";
 		}
 
-		public bool IsDeleted {
-			get { return Regex.Match(SongName, "^（.*）$").Success; }
-		}
-
 		static public string MakeResultCSV(Multi[] multis) {
 			string res = "\"ID\",\"曲名\",\"順位\",\"コンボ\",\"相方\",\"ID\"\r\n";
 
@@ -449,9 +441,5 @@ namespace SyncRes {
 			this.IDs = new string[appear];
 			Array.Copy(IDs, 0, this.IDs, 0, appear);
 		}
-
-		public bool IsDeleted {
-			get { return Regex.Match(SongName, "^（.*）$").Success; }
-		}
-	}
+ 	}
 }

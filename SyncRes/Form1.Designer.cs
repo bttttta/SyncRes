@@ -72,9 +72,11 @@ namespace SyncRes {
             this.splitContainer1.Panel1.Controls.Add(this.progressBar);
             this.splitContainer1.Panel1.Controls.Add(this.statusLabel);
             this.splitContainer1.Panel1.Controls.Add(this.urlTextBox);
+            this.splitContainer1.Panel1MinSize = 97;
             this.splitContainer1.Size = new System.Drawing.Size(684, 661);
             this.splitContainer1.SplitterDistance = 97;
-            this.splitContainer1.TabIndex = 1;
+            this.splitContainer1.TabIndex = 99;
+            this.splitContainer1.SplitterMoved += new System.Windows.Forms.SplitterEventHandler(this.SplitContainer1_SplitterMoved);
             // 
             // cmMusic
             // 
@@ -87,7 +89,7 @@ namespace SyncRes {
             this.cmMusic.Location = new System.Drawing.Point(604, 34);
             this.cmMusic.Name = "cmMusic";
             this.cmMusic.Size = new System.Drawing.Size(67, 20);
-            this.cmMusic.TabIndex = 17;
+            this.cmMusic.TabIndex = 10;
             // 
             // RKDLButton
             // 
@@ -96,7 +98,7 @@ namespace SyncRes {
             this.RKDLButton.Location = new System.Drawing.Point(591, 55);
             this.RKDLButton.Name = "RKDLButton";
             this.RKDLButton.Size = new System.Drawing.Size(81, 20);
-            this.RKDLButton.TabIndex = 16;
+            this.RKDLButton.TabIndex = 11;
             this.RKDLButton.Text = "RunkingDL!";
             this.RKDLButton.UseVisualStyleBackColor = true;
             this.RKDLButton.Click += new System.EventHandler(this.RKDLButton_Click);
@@ -107,7 +109,7 @@ namespace SyncRes {
             this.cbMulti.Location = new System.Drawing.Point(527, 78);
             this.cbMulti.Name = "cbMulti";
             this.cbMulti.Size = new System.Drawing.Size(33, 16);
-            this.cbMulti.TabIndex = 15;
+            this.cbMulti.TabIndex = 9;
             this.cbMulti.Text = "M";
             this.cbMulti.UseVisualStyleBackColor = true;
             // 
@@ -117,7 +119,7 @@ namespace SyncRes {
             this.cbTecpnd.Location = new System.Drawing.Point(467, 78);
             this.cbTecpnd.Name = "cbTecpnd";
             this.cbTecpnd.Size = new System.Drawing.Size(38, 16);
-            this.cbTecpnd.TabIndex = 14;
+            this.cbTecpnd.TabIndex = 8;
             this.cbTecpnd.Text = "TP";
             this.cbTecpnd.UseVisualStyleBackColor = true;
             // 
@@ -129,7 +131,7 @@ namespace SyncRes {
             this.cbPandora.Location = new System.Drawing.Point(556, 59);
             this.cbPandora.Name = "cbPandora";
             this.cbPandora.Size = new System.Drawing.Size(31, 16);
-            this.cbPandora.TabIndex = 11;
+            this.cbPandora.TabIndex = 7;
             this.cbPandora.Text = "P";
             this.cbPandora.UseVisualStyleBackColor = true;
             // 
@@ -141,7 +143,7 @@ namespace SyncRes {
             this.cbTechnical.Location = new System.Drawing.Point(527, 59);
             this.cbTechnical.Name = "cbTechnical";
             this.cbTechnical.Size = new System.Drawing.Size(31, 16);
-            this.cbTechnical.TabIndex = 10;
+            this.cbTechnical.TabIndex = 6;
             this.cbTechnical.Text = "T";
             this.cbTechnical.UseVisualStyleBackColor = true;
             // 
@@ -151,7 +153,7 @@ namespace SyncRes {
             this.cbAdvanced.Location = new System.Drawing.Point(497, 59);
             this.cbAdvanced.Name = "cbAdvanced";
             this.cbAdvanced.Size = new System.Drawing.Size(32, 16);
-            this.cbAdvanced.TabIndex = 9;
+            this.cbAdvanced.TabIndex = 5;
             this.cbAdvanced.Text = "A";
             this.cbAdvanced.UseVisualStyleBackColor = true;
             // 
@@ -161,7 +163,7 @@ namespace SyncRes {
             this.cbNormal.Location = new System.Drawing.Point(467, 59);
             this.cbNormal.Name = "cbNormal";
             this.cbNormal.Size = new System.Drawing.Size(32, 16);
-            this.cbNormal.TabIndex = 8;
+            this.cbNormal.TabIndex = 4;
             this.cbNormal.Text = "N";
             this.cbNormal.UseVisualStyleBackColor = true;
             // 
@@ -173,7 +175,7 @@ namespace SyncRes {
             this.cbDetail.Location = new System.Drawing.Point(527, 38);
             this.cbDetail.Name = "cbDetail";
             this.cbDetail.Size = new System.Drawing.Size(71, 16);
-            this.cbDetail.TabIndex = 7;
+            this.cbDetail.TabIndex = 3;
             this.cbDetail.Text = "Summary";
             this.cbDetail.UseVisualStyleBackColor = true;
             // 
@@ -183,7 +185,7 @@ namespace SyncRes {
             this.cbPerson.Location = new System.Drawing.Point(467, 38);
             this.cbPerson.Name = "cbPerson";
             this.cbPerson.Size = new System.Drawing.Size(56, 16);
-            this.cbPerson.TabIndex = 6;
+            this.cbPerson.TabIndex = 2;
             this.cbPerson.Text = "Player";
             this.cbPerson.UseVisualStyleBackColor = true;
             // 
@@ -194,7 +196,7 @@ namespace SyncRes {
             this.label1.Location = new System.Drawing.Point(110, 35);
             this.label1.Name = "label1";
             this.label1.Size = new System.Drawing.Size(67, 15);
-            this.label1.TabIndex = 5;
+            this.label1.TabIndex = 103;
             this.label1.Text = "UserID ->";
             // 
             // userIDBox
@@ -205,7 +207,7 @@ namespace SyncRes {
             this.userIDBox.Name = "userIDBox";
             this.userIDBox.ScrollBars = System.Windows.Forms.ScrollBars.Vertical;
             this.userIDBox.Size = new System.Drawing.Size(277, 56);
-            this.userIDBox.TabIndex = 4;
+            this.userIDBox.TabIndex = 1;
             // 
             // DLButton
             // 
@@ -214,7 +216,7 @@ namespace SyncRes {
             this.DLButton.Location = new System.Drawing.Point(591, 74);
             this.DLButton.Name = "DLButton";
             this.DLButton.Size = new System.Drawing.Size(81, 20);
-            this.DLButton.TabIndex = 3;
+            this.DLButton.TabIndex = 12;
             this.DLButton.Text = "Download!";
             this.DLButton.UseVisualStyleBackColor = true;
             this.DLButton.Click += new System.EventHandler(this.DLButton_Click);
@@ -225,7 +227,7 @@ namespace SyncRes {
             this.progressBar.Location = new System.Drawing.Point(12, 53);
             this.progressBar.Name = "progressBar";
             this.progressBar.Size = new System.Drawing.Size(165, 23);
-            this.progressBar.TabIndex = 2;
+            this.progressBar.TabIndex = 104;
             // 
             // statusLabel
             // 
@@ -235,7 +237,7 @@ namespace SyncRes {
             this.statusLabel.Location = new System.Drawing.Point(12, 35);
             this.statusLabel.Name = "statusLabel";
             this.statusLabel.Size = new System.Drawing.Size(50, 15);
-            this.statusLabel.TabIndex = 1;
+            this.statusLabel.TabIndex = 102;
             this.statusLabel.Text = "Unlogin";
             // 
             // urlTextBox
@@ -243,7 +245,7 @@ namespace SyncRes {
             this.urlTextBox.Location = new System.Drawing.Point(13, 13);
             this.urlTextBox.Name = "urlTextBox";
             this.urlTextBox.Size = new System.Drawing.Size(659, 19);
-            this.urlTextBox.TabIndex = 0;
+            this.urlTextBox.TabIndex = 101;
             // 
             // Form1
             // 

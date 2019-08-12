@@ -13,8 +13,10 @@ using System.Windows.Forms;
 namespace SyncRes {
 	public partial class Form1 : Form {
 		Browser browser;
-
 		string userPID;
+
+        int split = 97;
+        bool sizeChanged = false;
 
 		public Form1() {
 			InitializeComponent();
@@ -26,16 +28,16 @@ namespace SyncRes {
 			browser.OnReadEnded += Browser_AddressChanged;
 
             cmMusic.SelectedIndex = 0;
-		}
+            ControlEnable(false);
+        }
 
-		private async void Browser_AddressChanged(object sender, EventArgs e) {
+        private async void Browser_AddressChanged(object sender, EventArgs e) {
             string url = browser.GetURL();
             urlTextBox.Text = url;
             if(url == LoungeURL.Home && statusLabel.Text == "Unlogin") {
                 statusLabel.Text = "Login";
                 statusLabel.ForeColor = Color.DarkCyan;
-                DLButton.Enabled = true;
-                RKDLButton.Enabled = true;
+                ControlEnable(true);
 
                 browser.BeginDocReadMode(url);
                 string doc = await browser.ReadDocument(LoungeURL.ScoreHome);
@@ -46,7 +48,14 @@ namespace SyncRes {
             }
 		}
 
-		private string[] GetUserIDs() {
+        /// <summary>
+        /// コントロールの操作可否を変更
+        /// </summary>
+        void ControlEnable(bool enable) {
+            userIDBox.Enabled = cbPerson.Enabled = cbDetail.Enabled = cbNormal.Enabled = cbAdvanced.Enabled = cbTechnical.Enabled = cbPandora.Enabled = cbTecpnd.Enabled = cbMulti.Enabled = RKDLButton.Enabled = DLButton.Enabled = cmMusic.Enabled = enable;
+        }
+
+        private string[] GetUserIDs() {
 			const string idPattern = @"^[\dabcdef]{40}$";
 			List<string> idLists = new List<string>();
 
@@ -93,6 +102,8 @@ namespace SyncRes {
 			Ranking ranking = null;
 
 			StreamWriter writer;
+
+            ControlEnable(false);
 
             // 左のバーの初期設定
             progressBar.Maximum = 0;
@@ -154,9 +165,10 @@ namespace SyncRes {
 
 			statusLabel.Text = "Success!";
 			statusLabel.ForeColor = Color.Green;
-		}
+            ControlEnable(true);
+        }
 
-		private async void DLButton_Click(object sender, EventArgs e) {
+        private async void DLButton_Click(object sender, EventArgs e) {
 			string[] userIDs = GetUserIDs().Except(new[] { "" }).ToArray(); // 読み込み対象のプレイヤーID
 			bool[] checkStates = { cbNormal.Checked, cbAdvanced.Checked, cbTechnical.Checked, cbPandora.Checked };
 			bool isDownload(int dif) => checkStates[dif] || cbDetail.Checked || (dif >= 2 && cbTecpnd.Checked); // 各難易度を読み込むか
@@ -181,6 +193,8 @@ namespace SyncRes {
 			StreamWriter writer;
 
 			string doc;
+
+            ControlEnable(false);
             
             // 左のバーの初期設定
             progressBar.Value = 0;
@@ -194,7 +208,7 @@ namespace SyncRes {
                     progressBar.Maximum += userIDs.Length * musicList(dif).Count;
 				}
 			}
-			if(cbMulti.Checked) {
+			if(cbMulti.Checked || cbDetail.Checked) {
                 progressBar.Maximum += userIDs.Length * musicListNATM.Count;
 			}
 			if(progressBar.Maximum == 0) {
@@ -232,7 +246,7 @@ namespace SyncRes {
 				}
 			}
 
-			if(cbMulti.Checked) {
+			if(cbMulti.Checked || cbDetail.Checked) {
 				for(int user = 0; user < userIDs.Length; user++) {
 					for(int music = 0; music < musicListNATM.Count; music++) {
 						try {
@@ -268,8 +282,16 @@ namespace SyncRes {
 
 			if(cbDetail.Checked) {
 				writer = new StreamWriter("Summary.csv", false, encoding);
-				writer.Write(new Summary(players[0], results[0]).MakeCSV());
-				writer.Close();
+                if(userIDs.Length == 1) {
+                    writer.Write(Summary.MakeCSV(new Summary(players[0], results[0], multis[0])));
+                } else {
+                    Summary[] s = new Summary[userIDs.Length];
+                    for(int i = 0; i < userIDs.Length; i++) {
+                        s[i] = new Summary(players[i], results[i], multis[i]);
+                    }
+                    writer.Write(Summary.MakeCSV(s));
+                }
+                writer.Close();
 			}
 
 			for(int dif = 0; dif < 4; dif++) {
@@ -294,7 +316,7 @@ namespace SyncRes {
 				for(int i = 0; i < tpRes.Length; i++) {
                     //まず箱があるか探す
                     pndIndex = -1;
-                    string musicID = results[0][2][i].ID;
+                    string musicID = musicListNATM[i].ToString();
                     for(int j = 0; j < results[0][3].Length; j++) {
                         if(results[0][3][j] != null && results[0][3][j].ID == musicID) {
                             pndIndex = j;
@@ -325,17 +347,25 @@ namespace SyncRes {
 
 			statusLabel.Text = "Success!";
 			statusLabel.ForeColor = Color.Green;
-		}
+            ControlEnable(true);
+        }
 
-		private void Form1_Resize(object sender, EventArgs e) {
+        private void Form1_Resize(object sender, EventArgs e) {
 			this.Width = 700;
-			if(this.Height > 118) {
-				splitContainer1.SplitterDistance = 118;
-			}
+            splitContainer1.SplitterDistance = split;
+            sizeChanged = true;
 		}
 
 		private void Form1_FormClosing(object sender, FormClosingEventArgs e) {
             Browser.Shutdown();
 		}
-	}
+
+        private void SplitContainer1_SplitterMoved(object sender, SplitterEventArgs e) {
+            if(!sizeChanged) {
+                split = splitContainer1.SplitterDistance;
+            }
+            sizeChanged = false;
+            userIDBox.Size = new Size(userIDBox.Size.Width, splitContainer1.SplitterDistance - 41);
+        }
+    }
 }
